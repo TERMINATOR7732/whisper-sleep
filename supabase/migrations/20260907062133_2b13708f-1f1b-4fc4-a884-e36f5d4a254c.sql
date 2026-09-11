@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.get_shared_sleep_days(uuid, integer) FROM anon;
