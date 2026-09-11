@@ -17,6 +17,7 @@ import { homeFor } from "@/components/app/nav-config";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { TIMEZONES, detectTimezone } from "@/lib/timezones";
+import { supabase } from "@/integrations/supabase/client";
 import type { AppRole } from "@/types/db";
 
 export const Route = createFileRoute("/onboarding")({
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/onboarding")({
 });
 
 function Onboarding() {
+  const [mounted, setMounted] = useState(false);
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { data: profile, isLoading } = useProfile();
@@ -47,9 +49,49 @@ function Onboarding() {
   const [role, setRole] = useState<AppRole>("user");
   const [error, setError] = useState<string | null>(null);
 
+  const [authRestoring, setAuthRestoring] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const hash = window.location.hash;
+    const search = window.location.search;
+    return (
+      hash.includes("access_token") ||
+      hash.includes("refresh_token") ||
+      search.includes("code=")
+    );
+  });
+
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", replace: true });
-  }, [loading, user, navigate]);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!authRestoring) return;
+
+    if (user) {
+      setAuthRestoring(false);
+      return;
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setAuthRestoring(false);
+      }
+    });
+
+    const timer = setTimeout(() => {
+      setAuthRestoring(false);
+    }, 4000);
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [authRestoring, user]);
+
+  useEffect(() => {
+    if (!mounted || loading || authRestoring) return;
+    if (!user) navigate({ to: "/auth", replace: true });
+  }, [mounted, loading, authRestoring, user, navigate]);
 
   useEffect(() => {
     if (!profile) return;
@@ -80,7 +122,11 @@ function Onboarding() {
     }
   }
 
-  if (loading || isLoading) {
+  if (!mounted) {
+    return null;
+  }
+
+  if (loading || isLoading || authRestoring) {
     return (
       <div className="mx-auto max-w-md space-y-4 p-6">
         <Skeleton className="h-9 w-48" />

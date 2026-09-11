@@ -22,8 +22,10 @@ import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedRecoveryRouteImport } from './routes/_authenticated/recovery'
 import { Route as AuthenticatedResetRouteImport } from './routes/_authenticated/reset'
 import { Route as AuthenticatedTrendsRouteImport } from './routes/_authenticated/trends'
+import { Route as AuthenticatedWindDownRouteImport } from './routes/_authenticated/wind-down'
 import { Route as AuthenticatedDayDateRouteImport } from './routes/_authenticated/day.$date'
 
 const IndexRoute = IndexRouteImport.update({
@@ -90,6 +92,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRecoveryRoute = AuthenticatedRecoveryRouteImport.update({
+  id: '/recovery',
+  path: '/recovery',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedResetRoute = AuthenticatedResetRouteImport.update({
   id: '/reset',
   path: '/reset',
@@ -98,6 +105,11 @@ const AuthenticatedResetRoute = AuthenticatedResetRouteImport.update({
 const AuthenticatedTrendsRoute = AuthenticatedTrendsRouteImport.update({
   id: '/trends',
   path: '/trends',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWindDownRoute = AuthenticatedWindDownRouteImport.update({
+  id: '/wind-down',
+  path: '/wind-down',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDayDateRoute = AuthenticatedDayDateRouteImport.update({
@@ -119,8 +131,10 @@ export interface FileRoutesByFullPath {
   '/messages': typeof AuthenticatedMessagesRoute
   '/patterns': typeof AuthenticatedPatternsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/recovery': typeof AuthenticatedRecoveryRoute
   '/reset': typeof AuthenticatedResetRoute
   '/trends': typeof AuthenticatedTrendsRoute
+  '/wind-down': typeof AuthenticatedWindDownRoute
   '/day/$date': typeof AuthenticatedDayDateRoute
 }
 export interface FileRoutesByTo {
@@ -136,8 +150,10 @@ export interface FileRoutesByTo {
   '/messages': typeof AuthenticatedMessagesRoute
   '/patterns': typeof AuthenticatedPatternsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/recovery': typeof AuthenticatedRecoveryRoute
   '/reset': typeof AuthenticatedResetRoute
   '/trends': typeof AuthenticatedTrendsRoute
+  '/wind-down': typeof AuthenticatedWindDownRoute
   '/day/$date': typeof AuthenticatedDayDateRoute
 }
 export interface FileRoutesById {
@@ -155,8 +171,10 @@ export interface FileRoutesById {
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/patterns': typeof AuthenticatedPatternsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/recovery': typeof AuthenticatedRecoveryRoute
   '/_authenticated/reset': typeof AuthenticatedResetRoute
   '/_authenticated/trends': typeof AuthenticatedTrendsRoute
+  '/_authenticated/wind-down': typeof AuthenticatedWindDownRoute
   '/_authenticated/day/$date': typeof AuthenticatedDayDateRoute
 }
 export interface FileRouteTypes {
@@ -174,8 +192,10 @@ export interface FileRouteTypes {
     | '/messages'
     | '/patterns'
     | '/profile'
+    | '/recovery'
     | '/reset'
     | '/trends'
+    | '/wind-down'
     | '/day/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -191,8 +211,10 @@ export interface FileRouteTypes {
     | '/messages'
     | '/patterns'
     | '/profile'
+    | '/recovery'
     | '/reset'
     | '/trends'
+    | '/wind-down'
     | '/day/$date'
   id:
     | '__root__'
@@ -209,8 +231,10 @@ export interface FileRouteTypes {
     | '/_authenticated/messages'
     | '/_authenticated/patterns'
     | '/_authenticated/profile'
+    | '/_authenticated/recovery'
     | '/_authenticated/reset'
     | '/_authenticated/trends'
+    | '/_authenticated/wind-down'
     | '/_authenticated/day/$date'
   fileRoutesById: FileRoutesById
 }
@@ -315,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/recovery': {
+      id: '/_authenticated/recovery'
+      path: '/recovery'
+      fullPath: '/recovery'
+      preLoaderRoute: typeof AuthenticatedRecoveryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reset': {
       id: '/_authenticated/reset'
       path: '/reset'
@@ -327,6 +358,13 @@ declare module '@tanstack/react-router' {
       path: '/trends'
       fullPath: '/trends'
       preLoaderRoute: typeof AuthenticatedTrendsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/wind-down': {
+      id: '/_authenticated/wind-down'
+      path: '/wind-down'
+      fullPath: '/wind-down'
+      preLoaderRoute: typeof AuthenticatedWindDownRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/day/$date': {
@@ -348,8 +386,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPatternsRoute: typeof AuthenticatedPatternsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedRecoveryRoute: typeof AuthenticatedRecoveryRoute
   AuthenticatedResetRoute: typeof AuthenticatedResetRoute
   AuthenticatedTrendsRoute: typeof AuthenticatedTrendsRoute
+  AuthenticatedWindDownRoute: typeof AuthenticatedWindDownRoute
   AuthenticatedDayDateRoute: typeof AuthenticatedDayDateRoute
 }
 
@@ -362,8 +402,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPatternsRoute: AuthenticatedPatternsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedRecoveryRoute: AuthenticatedRecoveryRoute,
   AuthenticatedResetRoute: AuthenticatedResetRoute,
   AuthenticatedTrendsRoute: AuthenticatedTrendsRoute,
+  AuthenticatedWindDownRoute: AuthenticatedWindDownRoute,
   AuthenticatedDayDateRoute: AuthenticatedDayDateRoute,
 }
 

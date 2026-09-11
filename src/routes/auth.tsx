@@ -27,12 +27,21 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
+  const [mounted, setMounted] = useState(false);
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (!loading && user) navigate({ to: "/onboarding", replace: true });
   }, [loading, user, navigate]);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-5 py-12">
