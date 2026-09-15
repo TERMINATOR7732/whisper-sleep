@@ -116,6 +116,39 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_invites: {
+        Row: {
+          accepted_by: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          invite_code: string
+          inviter_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invite_code: string
+          inviter_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invite_code?: string
+          inviter_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -507,6 +540,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_partner_invite: { Args: { raw_code: string }; Returns: Json }
+      cancel_partner_invite: { Args: never; Returns: boolean }
+      create_partner_invite: { Args: never; Returns: Json }
+      disconnect_partner: { Args: never; Returns: boolean }
+      generate_invite_code: { Args: never; Returns: string }
+      get_my_partner_invite: { Args: never; Returns: Json }
       get_my_streak: { Args: never; Returns: Json }
       get_shared_recovery_status: { Args: { _user_id: string }; Returns: Json }
       get_shared_reset_plan: { Args: { _user_id: string }; Returns: Json }
@@ -515,6 +554,7 @@ export type Database = {
         Returns: Json
       }
       is_actively_linked: { Args: { _a: string; _b: string }; Returns: boolean }
+      normalize_invite_code: { Args: { raw_code: string }; Returns: string }
     }
     Enums: {
       app_role: "user" | "partner"

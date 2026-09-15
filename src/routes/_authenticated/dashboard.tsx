@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Activity, CalendarClock, Heart, Lock, Moon, Sunrise } from "lucide-react";
 
 import { PageHeader } from "@/components/app/app-shell";
 import { EmptyState } from "@/components/app/empty-state";
 import { RoleGate } from "@/components/app/role-gate";
 import { PlaceholderRow, SectionCard } from "@/components/app/section-card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type SharedRecoveryStatus,
@@ -47,14 +48,33 @@ function PartnerDashboard() {
       {relationshipLoading ? <Skeleton className="h-40 w-full rounded-2xl" /> : null}
       {relationshipError ? <div className="card-soft p-5 text-sm text-destructive">{relationshipError.message || "We couldn't check your connection right now. Please try again."}</div> : null}
       {!relationshipLoading && !relationshipError && !linkedUserId ? (
-        <div className="card-soft fade-rise">
-          <EmptyState icon={Lock} title="No active connection" description="This space stays private until there is an active connection and she chooses something to share." />
+        <div className="card-soft fade-rise space-y-4 p-6 text-center">
+          <EmptyState
+            icon={Lock}
+            title="No active connection"
+            description="This space stays private until there is an active connection and she chooses something to share."
+          />
+          <div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/profile">Go to Profile to connect</Link>
+            </Button>
+          </div>
         </div>
       ) : null}
       {linkedUserId ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ResetPlanCard data={resetPlan.data} isLoading={resetPlan.isLoading} error={resetPlan.error} />
-          <RecoveryStatusCard data={recovery.data} isLoading={recovery.isLoading} error={recovery.error} />
+        <div className="space-y-4">
+          {!resetPlan.isLoading && !recovery.isLoading && !resetPlan.data?.shared && !recovery.data?.shared ? (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-1">
+              <p className="text-sm font-medium text-foreground">You're connected.</p>
+              <p className="text-xs text-muted-foreground">
+                Shared sleep information will appear here when it's available.
+              </p>
+            </div>
+          ) : null}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ResetPlanCard data={resetPlan.data} isLoading={resetPlan.isLoading} error={resetPlan.error} />
+            <RecoveryStatusCard data={recovery.data} isLoading={recovery.isLoading} error={recovery.error} />
+          </div>
         </div>
       ) : null}
 

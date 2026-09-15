@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/app-shell";
 import { RoleGate } from "@/components/app/role-gate";
+import { PartnerConnectionSection } from "@/components/app/partner-connection-section";
 import { PlaceholderRow, SectionCard } from "@/components/app/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,6 +140,8 @@ function ProfilePage() {
           </Button>
         </div>
       </form>
+
+      {profile?.role ? <PartnerConnectionSection role={profile.role} /> : null}
 
       {profile?.role === "user" ? (
         <SectionCard
