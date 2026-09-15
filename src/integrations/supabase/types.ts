@@ -507,6 +507,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_streak: { Args: never; Returns: Json }
       get_shared_recovery_status: { Args: { _user_id: string }; Returns: Json }
       get_shared_reset_plan: { Args: { _user_id: string }; Returns: Json }
       get_shared_sleep_days: {

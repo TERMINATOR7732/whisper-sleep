@@ -244,6 +244,7 @@ export function useSaveDayLog() {
     onSuccess: ({ date }) => {
       queryClient.invalidateQueries({ queryKey: dayLogKey(user?.id, date) });
       queryClient.invalidateQueries({ queryKey: ["sleep-history", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["streak", user?.id] });
     },
   });
 }
@@ -267,6 +268,7 @@ export function useDeleteDayLog() {
     onSuccess: ({ date }) => {
       queryClient.invalidateQueries({ queryKey: dayLogKey(user?.id, date) });
       queryClient.invalidateQueries({ queryKey: ["sleep-history", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["streak", user?.id] });
     },
   });
 }

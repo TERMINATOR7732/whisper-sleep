@@ -8,6 +8,7 @@ import { RoleGate } from "@/components/app/role-gate";
 import { SectionCard } from "@/components/app/section-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StreakCard } from "@/components/sleep/streak-card";
 import { useProfile } from "@/hooks/use-profile";
 import { useResetPlan } from "@/hooks/use-reset";
 import { useSleepHistory } from "@/hooks/use-sleep";
@@ -110,6 +111,8 @@ function HomePage() {
             : "Whenever you're ready, tell Nightly how the night went."
         }
       />
+
+      <StreakCard />
 
       {isLoading ? (
         <Skeleton className="h-40 w-full rounded-2xl" />
