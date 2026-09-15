@@ -13,6 +13,9 @@ export type Nap = Database["public"]["Tables"]["naps"]["Row"];
 export type DailyCheckin = Database["public"]["Tables"]["daily_checkins"]["Row"];
 export type SleepReason = Database["public"]["Tables"]["sleep_reasons"]["Row"];
 export type PartnerInvite = Database["public"]["Tables"]["partner_invites"]["Row"];
+export type NotificationPreferences = Database["public"]["Tables"]["notification_preferences"]["Row"];
+export type NotificationPreferencesInsert = Database["public"]["Tables"]["notification_preferences"]["Insert"];
+export type NotificationPreferencesUpdate = Database["public"]["Tables"]["notification_preferences"]["Update"];
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   user: "Primary user",

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/app/app-shell";
 import { RoleGate } from "@/components/app/role-gate";
 import { PartnerConnectionSection } from "@/components/app/partner-connection-section";
+import { NotificationPreferencesCard } from "@/components/app/notification-preferences-card";
 import { PlaceholderRow, SectionCard } from "@/components/app/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -186,9 +187,10 @@ function ProfilePage() {
         </SectionCard>
       ) : null}
 
+      <NotificationPreferencesCard />
+
       <SectionCard title="Coming later" icon={Shield} hint="These settings are planned for the next stages.">
         <PlaceholderRow label="Sleep goals" note="Coming soon" />
-        <PlaceholderRow label="Notifications" note="Coming soon" />
         <PlaceholderRow label="Privacy" note="Coming soon" />
         <PlaceholderRow label="Appearance" note="Coming soon" />
         <PlaceholderRow label="Data export" note="Coming soon" />

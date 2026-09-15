@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BatteryCharging, Heart, HeartHandshake, Moon, RotateCcw, Smile, Sparkles, Sun, Target } from "lucide-react";
-import { useMemo } from "react";
+import { BatteryCharging, Flame, Heart, HeartHandshake, Moon, RotateCcw, Smile, Sparkles, Sun, Target, X } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/app/app-shell";
 import { EmptyState } from "@/components/app/empty-state";
@@ -9,9 +9,11 @@ import { SectionCard } from "@/components/app/section-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StreakCard } from "@/components/sleep/streak-card";
+import { useNotificationPreferences } from "@/hooks/use-notifications";
 import { useProfile } from "@/hooks/use-profile";
-import { useResetPlan } from "@/hooks/use-reset";
+import { useResetPlan, useWindDownSessions } from "@/hooks/use-reset";
 import { useSleepHistory } from "@/hooks/use-sleep";
+import { useStreak } from "@/hooks/use-streak";
 import { toDayRecords } from "@/lib/day-records";
 import { detectRoughNight } from "@/lib/reset";
 import {
@@ -52,6 +54,33 @@ function Metric({ label, value, note }: { label: string; value: string; note?: s
   );
 }
 
+function parseTimeToMinutes(t?: string | null): number | null {
+  if (!t) return null;
+  const parts = t.split(":");
+  if (parts.length < 2 || parts[0] === undefined || parts[1] === undefined) return null;
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function getLocalMinutes(tz: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz,
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).formatToParts(new Date());
+    const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+    const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+    return h * 60 + m;
+  } catch {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+}
+
 function HomePage() {
   const { data: profile } = useProfile();
   const timezone = safeTimezone(profile?.timezone);
@@ -59,6 +88,10 @@ function HomePage() {
   const name = profile?.nickname || profile?.display_name;
   const { data: history, isLoading } = useSleepHistory(7);
   const { data: plan } = useResetPlan();
+  const { preferences: notifPrefs } = useNotificationPreferences();
+  const { streak } = useStreak();
+  const { data: windDownSessions } = useWindDownSessions(1);
+  const [dismissedCue, setDismissedCue] = useState(false);
 
   const latest = history?.[0] ?? null;
   const sleep = latest?.sleep ?? null;
@@ -71,6 +104,76 @@ function HomePage() {
   const sleepDays = useMemo(() => days.filter((day) => day.totalSleepMinutes != null), [days]);
   const targetMinutes = plan?.desired_sleep_minutes ?? profile?.sleep_goal_minutes ?? 480;
   const rough = useMemo(() => detectRoughNight(sleepDays, targetMinutes), [sleepDays, targetMinutes]);
+
+  const reminderCue = useMemo(() => {
+    if (dismissedCue || !notifPrefs) return null;
+
+    const nowMins = getLocalMinutes(timezone);
+
+    // 1. Quiet hours check
+    if (notifPrefs.quiet_hours_enabled) {
+      const qStart = parseTimeToMinutes(notifPrefs.quiet_hours_start);
+      const qEnd = parseTimeToMinutes(notifPrefs.quiet_hours_end);
+      if (qStart !== null && qEnd !== null) {
+        const isQuiet =
+          qStart > qEnd
+            ? nowMins >= qStart || nowMins < qEnd
+            : nowMins >= qStart && nowMins < qEnd;
+        if (isQuiet) return null;
+      }
+    }
+
+    // 2. Evening Wind-down reminder
+    if (notifPrefs.wind_down_reminders_enabled) {
+      const windDownDone = windDownSessions?.[0]?.session_date === today;
+      const windDownMins = parseTimeToMinutes(notifPrefs.wind_down_reminder_time) ?? 1350;
+      if (!windDownDone && nowMins >= windDownMins) {
+        return {
+          icon: Moon,
+          title: "Evening routine",
+          text: "Your evening wind-down is ready whenever you are.",
+          actionText: "Begin wind-down",
+          href: "/wind-down",
+        };
+      }
+    }
+
+    // 3. Streak / Check-in reminder (only if today's check-in is not complete)
+    if (!loggedToday) {
+      if (notifPrefs.streak_reminders_enabled && (streak?.current_streak ?? 0) > 0) {
+        return {
+          icon: Flame,
+          title: "Daily rhythm",
+          text: "Your streak is waiting for today’s check-in.",
+          actionText: "Log check-in",
+          href: "/check-in",
+        };
+      }
+
+      if (notifPrefs.checkin_reminders_enabled) {
+        const checkinMins = parseTimeToMinutes(notifPrefs.checkin_reminder_time) ?? 1200;
+        if (nowMins >= checkinMins) {
+          return {
+            icon: Sun,
+            title: "Check-in reminder",
+            text: "A small check-in can help you keep your rhythm.",
+            actionText: "Check in now",
+            href: "/check-in",
+          };
+        }
+      }
+    }
+
+    return null;
+  }, [
+    dismissedCue,
+    notifPrefs,
+    timezone,
+    windDownSessions,
+    today,
+    loggedToday,
+    streak?.current_streak,
+  ]);
 
   const todayGuidance = !rough.day
     ? {
@@ -111,6 +214,34 @@ function HomePage() {
             : "Whenever you're ready, tell Nightly how the night went."
         }
       />
+
+      {reminderCue ? (
+        <div className="card-soft fade-rise flex items-center justify-between gap-3 p-3.5 border border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <reminderCue.icon className="size-4" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground">{reminderCue.title}</p>
+              <p className="text-xs text-muted-foreground">{reminderCue.text}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="default" className="h-7 text-xs">
+              <Link to={reminderCue.href}>{reminderCue.actionText}</Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="size-7 p-0 text-muted-foreground hover:text-foreground"
+              onClick={() => setDismissedCue(true)}
+              aria-label="Dismiss reminder"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <StreakCard />
 

@@ -116,6 +116,48 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          checkin_reminder_time: string
+          checkin_reminders_enabled: boolean
+          created_at: string
+          quiet_hours_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          streak_reminders_enabled: boolean
+          updated_at: string
+          user_id: string
+          wind_down_reminder_time: string
+          wind_down_reminders_enabled: boolean
+        }
+        Insert: {
+          checkin_reminder_time?: string
+          checkin_reminders_enabled?: boolean
+          created_at?: string
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          streak_reminders_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          wind_down_reminder_time?: string
+          wind_down_reminders_enabled?: boolean
+        }
+        Update: {
+          checkin_reminder_time?: string
+          checkin_reminders_enabled?: boolean
+          created_at?: string
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          streak_reminders_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          wind_down_reminder_time?: string
+          wind_down_reminders_enabled?: boolean
+        }
+        Relationships: []
+      }
       partner_invites: {
         Row: {
           accepted_by: string | null
