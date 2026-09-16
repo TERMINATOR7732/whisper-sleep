@@ -71,6 +71,28 @@ export function useSharingPermissions(partnerId: string | null | undefined) {
   return { ...query, isLoading: loading || query.isLoading };
 }
 
+export type SharingPermissionKey =
+  | "share_sleep_duration"
+  | "share_sleep_quality"
+  | "share_exact_bedtime"
+  | "share_exact_waketime"
+  | "share_mood"
+  | "share_energy"
+  | "share_caffeine"
+  | "share_phone_usage"
+  | "share_naps"
+  | "share_reasons"
+  | "share_notes"
+  | "share_insights"
+  | "share_patterns"
+  | "share_journal"
+  | "share_reset_plan"
+  | "share_recovery_status";
+
+export type SharingPermissionUpdates = Partial<Record<SharingPermissionKey, boolean>> & {
+  share_everything?: boolean;
+};
+
 export function useSaveSharingPermissions() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -81,7 +103,7 @@ export function useSaveSharingPermissions() {
       values,
     }: {
       partnerId: string;
-      values: { share_reset_plan?: boolean; share_recovery_status?: boolean };
+      values: SharingPermissionUpdates;
     }) => {
       if (!user) throw new Error("You need to be signed in.");
       const { data, error } = await supabase
@@ -97,6 +119,9 @@ export function useSaveSharingPermissions() {
     },
     onSuccess: ({ partnerId, permissions }) => {
       queryClient.setQueryData(["sharing-permissions", user?.id, partnerId], permissions);
+      queryClient.invalidateQueries({ queryKey: ["sharing-permissions"] });
+      queryClient.invalidateQueries({ queryKey: ["shared-reset-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["shared-recovery-status"] });
     },
   });
 }
