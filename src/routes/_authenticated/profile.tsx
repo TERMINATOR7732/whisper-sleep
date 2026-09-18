@@ -9,6 +9,7 @@ import { RoleGate } from "@/components/app/role-gate";
 import { PartnerConnectionSection } from "@/components/app/partner-connection-section";
 import { PartnerSharingSection } from "@/components/app/partner-sharing-section";
 import { NotificationPreferencesCard } from "@/components/app/notification-preferences-card";
+import { BrowserNotificationsCard } from "@/components/app/browser-notifications-card";
 import { PlaceholderRow, SectionCard } from "@/components/app/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,6 +131,8 @@ function ProfilePage() {
       {profile?.role === "user" ? <PartnerSharingSection role={profile.role} /> : null}
 
       <NotificationPreferencesCard />
+
+      <BrowserNotificationsCard />
 
       <SectionCard title="Coming later" icon={Shield} hint="These settings are planned for the next stages.">
         <PlaceholderRow label="Sleep goals" note="Coming soon" />

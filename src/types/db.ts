@@ -16,6 +16,9 @@ export type PartnerInvite = Database["public"]["Tables"]["partner_invites"]["Row
 export type NotificationPreferences = Database["public"]["Tables"]["notification_preferences"]["Row"];
 export type NotificationPreferencesInsert = Database["public"]["Tables"]["notification_preferences"]["Insert"];
 export type NotificationPreferencesUpdate = Database["public"]["Tables"]["notification_preferences"]["Update"];
+export type PushSubscriptionRow = Database["public"]["Tables"]["push_subscriptions"]["Row"];
+export type PushSubscriptionInsert = Database["public"]["Tables"]["push_subscriptions"]["Insert"];
+export type PushSubscriptionUpdate = Database["public"]["Tables"]["push_subscriptions"]["Update"];
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   user: "Primary user",
