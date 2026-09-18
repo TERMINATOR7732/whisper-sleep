@@ -1,5 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 import { sendPushToUser, type PushNotificationPayload, type VapidConfig } from "../_shared/push.ts";
+import {
+  formatNotificationBody,
+  hashString,
+  selectTemplateIndex,
+} from "../_shared/notification-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -187,6 +192,39 @@ async function markFailed(
   }
 }
 
+/**
+ * Fetches recent template indexes for this user and notification type
+ * from notification_logs to prevent duplicate/repeated copy.
+ */
+async function getRecentTemplateIndexes(
+  adminClient: ReturnType<typeof createClient>,
+  userId: string,
+  notificationType: string,
+  limit = 10,
+): Promise<number[]> {
+  try {
+    const { data, error } = await adminClient
+      .from("notification_logs")
+      .select("metadata")
+      .eq("user_id", userId)
+      .eq("notification_type", notificationType)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error || !data) return [];
+    const indexes: number[] = [];
+    for (const row of data) {
+      const meta = row.metadata as Record<string, unknown> | null;
+      if (meta && typeof meta.template_index === "number") {
+        indexes.push(meta.template_index);
+      }
+    }
+    return indexes;
+  } catch {
+    return [];
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Reminder dispatch: claim → send → mark (atomic state machine)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,6 +248,7 @@ async function sendReminderAtomic(
   localDate: string,
   payload: PushNotificationPayload,
   vapidConfig: VapidConfig,
+  extraMetadata?: Record<string, unknown>,
 ): Promise<boolean> {
   // Step 1: Atomic claim
   const claimed = await claimSlot(adminClient, userId, notificationType, localDate);
@@ -233,6 +272,7 @@ async function sendReminderAtomic(
     await markSent(adminClient, userId, notificationType, localDate, {
       sent: pushResult.sent,
       removed: pushResult.removed,
+      ...(extraMetadata || {}),
     });
     return true;
   } else {
@@ -347,7 +387,7 @@ Deno.serve(async (req: Request) => {
   // 7. Query primary users only (role = 'user')
   const { data: primaryProfiles, error: profileErr } = await adminClient
     .from("profiles")
-    .select("id, role, timezone")
+    .select("id, role, timezone, display_name, nickname")
     .eq("role", "user");
 
   if (profileErr) {
@@ -375,7 +415,7 @@ Deno.serve(async (req: Request) => {
   for (const profile of primaryProfiles) {
     try {
       // ─────────────────────────────────────────────────────────────────────
-      // ISSUE 1 FIX: Strict timezone validation — NO UTC fallback.
+      // Strict timezone validation — NO UTC fallback.
       // If timezone is null, empty, whitespace, or an unrecognised IANA
       // identifier, skip this user's reminder evaluation entirely and log
       // an aggregate skip count. Never guess UTC or server timezone.
@@ -434,6 +474,15 @@ Deno.serve(async (req: Request) => {
       processedUsers++;
       const { localDate, localYesterday, nowMins } = zoned;
 
+      // Clean display name or nickname for personalization
+      const girlName =
+        (typeof profile.nickname === "string" && profile.nickname.trim().length > 0
+          ? profile.nickname.trim()
+          : null) ||
+        (typeof profile.display_name === "string" && profile.display_name.trim().length > 0
+          ? profile.display_name.trim()
+          : null);
+
       // Evaluate Quiet Hours
       if (prefs.quiet_hours_enabled) {
         const qStart = parseTimeToMinutes(prefs.quiet_hours_start);
@@ -462,15 +511,26 @@ Deno.serve(async (req: Request) => {
           if (session) {
             skippedCompleted++;
           } else {
+            const recentIndexes = await getRecentTemplateIndexes(adminClient, profile.id, "wind_down");
+            const seed = hashString(`${profile.id}-${localDate}-wind_down`);
+            const templateIndex = selectTemplateIndex("girl_winddown", recentIndexes, seed);
+            const body = formatNotificationBody("girl_winddown", templateIndex, girlName);
+
             const payload: PushNotificationPayload = {
               title: "Nightly",
-              body: "Time to start winding down.",
+              body,
               url: "/wind-down",
               tag: "nightly-winddown",
             };
 
             const sent = await sendReminderAtomic(
-              adminClient, profile.id, "wind_down", localDate, payload, vapidConfig
+              adminClient,
+              profile.id,
+              "wind_down",
+              localDate,
+              payload,
+              vapidConfig,
+              { template_index: templateIndex },
             );
             if (sent) remindersSent++;
           }
@@ -478,7 +538,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // ─────────────────────────────────────────────────────────────────────
-      // REMINDER 2: Daily Check-in or Streak Reminder
+      // REMINDER 2: Daily Check-in, Streak, or Partner Check-on-Her Reminder
       // Uses atomic claim → send → mark pattern.
       // ─────────────────────────────────────────────────────────────────────
       const checkinMins = parseTimeToMinutes(prefs.checkin_reminder_time) ?? 1200; // default 20:00
@@ -493,6 +553,131 @@ Deno.serve(async (req: Request) => {
 
         if (checkin) {
           skippedCompleted++;
+
+          // ─────────────────────────────────────────────────────────────────
+          // AUDIENCE 2: Partner Check-on-Her Reminder
+          // Triggered when girl HAS completed her daily check-in, she has an
+          // active partner relationship, and has sharing permissions enabled.
+          // Partner notification NEVER exposes private sleep metrics.
+          // ─────────────────────────────────────────────────────────────────
+          try {
+            const { data: relationship } = await adminClient
+              .from("relationships")
+              .select("partner_id")
+              .eq("user_id", profile.id)
+              .eq("status", "active")
+              .maybeSingle();
+
+            if (relationship?.partner_id) {
+              const { data: perms } = await adminClient
+                .from("sharing_permissions")
+                .select("*")
+                .eq("user_id", profile.id)
+                .eq("partner_id", relationship.partner_id)
+                .maybeSingle();
+
+              const hasActiveSharing = perms && (
+                perms.share_everything ||
+                perms.share_sleep_duration ||
+                perms.share_sleep_quality ||
+                perms.share_exact_bedtime ||
+                perms.share_exact_waketime ||
+                perms.share_mood ||
+                perms.share_energy ||
+                perms.share_caffeine ||
+                perms.share_phone_usage ||
+                perms.share_naps ||
+                perms.share_reasons ||
+                perms.share_notes ||
+                perms.share_insights ||
+                perms.share_patterns ||
+                perms.share_journal
+              );
+
+              if (hasActiveSharing) {
+                const { data: partnerProfile } = await adminClient
+                  .from("profiles")
+                  .select("id, timezone, display_name, nickname")
+                  .eq("id", relationship.partner_id)
+                  .maybeSingle();
+
+                if (partnerProfile && isValidTimezone(partnerProfile.timezone)) {
+                  const partnerZoned = getZonedTime(now, (partnerProfile.timezone as string).trim());
+
+                  const { data: partnerPrefRow } = await adminClient
+                    .from("notification_preferences")
+                    .select("*")
+                    .eq("user_id", partnerProfile.id)
+                    .maybeSingle();
+
+                  const partnerPrefs = {
+                    checkin_reminders_enabled: partnerPrefRow?.checkin_reminders_enabled ?? true,
+                    checkin_reminder_time: partnerPrefRow?.checkin_reminder_time ?? "20:00",
+                    quiet_hours_enabled: partnerPrefRow?.quiet_hours_enabled ?? false,
+                    quiet_hours_start: partnerPrefRow?.quiet_hours_start ?? "22:00",
+                    quiet_hours_end: partnerPrefRow?.quiet_hours_end ?? "07:00",
+                  };
+
+                  let partnerInQuiet = false;
+                  if (partnerPrefs.quiet_hours_enabled) {
+                    const pqStart = parseTimeToMinutes(partnerPrefs.quiet_hours_start);
+                    const pqEnd = parseTimeToMinutes(partnerPrefs.quiet_hours_end);
+                    if (pqStart !== null && pqEnd !== null && isQuiet(partnerZoned.nowMins, pqStart, pqEnd)) {
+                      partnerInQuiet = true;
+                    }
+                  }
+
+                  const partnerCheckinMins = parseTimeToMinutes(partnerPrefs.checkin_reminder_time) ?? 1200;
+
+                  if (partnerPrefs.checkin_reminders_enabled && !partnerInQuiet && partnerZoned.nowMins >= partnerCheckinMins) {
+                    const { count: partnerSubCount } = await adminClient
+                      .from("push_subscriptions")
+                      .select("id", { count: "exact", head: true })
+                      .eq("user_id", partnerProfile.id);
+
+                    if (partnerSubCount && partnerSubCount > 0) {
+                      const partnerRecentIndexes = await getRecentTemplateIndexes(
+                        adminClient,
+                        partnerProfile.id,
+                        "checkin",
+                      );
+                      const partnerSeed = hashString(`${partnerProfile.id}-${partnerZoned.localDate}-partner_checkin`);
+                      const partnerTemplateIndex = selectTemplateIndex(
+                        "partner_check_on_her",
+                        partnerRecentIndexes,
+                        partnerSeed,
+                      );
+                      const partnerBody = formatNotificationBody(
+                        "partner_check_on_her",
+                        partnerTemplateIndex,
+                        girlName,
+                      );
+
+                      const partnerPayload: PushNotificationPayload = {
+                        title: "Nightly",
+                        body: partnerBody,
+                        url: "/",
+                        tag: "nightly-partner-checkin",
+                      };
+
+                      const partnerSent = await sendReminderAtomic(
+                        adminClient,
+                        partnerProfile.id,
+                        "checkin",
+                        partnerZoned.localDate,
+                        partnerPayload,
+                        vapidConfig,
+                        { template_index: partnerTemplateIndex, partner_for: profile.id },
+                      );
+                      if (partnerSent) remindersSent++;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (partnerErr: unknown) {
+            console.warn(`Partner reminder check failed for girl ${profile.id}:`, partnerErr);
+          }
         } else {
           // Check if user has an active streak (checked in yesterday)
           const { data: yesterdayCheckin } = await adminClient
@@ -506,28 +691,50 @@ Deno.serve(async (req: Request) => {
 
           if (prefs.streak_reminders_enabled && hasActiveStreak) {
             // Send Streak Reminder
+            const recentIndexes = await getRecentTemplateIndexes(adminClient, profile.id, "streak");
+            const seed = hashString(`${profile.id}-${localDate}-streak`);
+            const templateIndex = selectTemplateIndex("girl_streak", recentIndexes, seed);
+            const body = formatNotificationBody("girl_streak", templateIndex, girlName);
+
             const payload: PushNotificationPayload = {
               title: "Nightly",
-              body: "Keep your streak going — your check-in is waiting.",
+              body,
               url: "/check-in",
               tag: "nightly-streak",
             };
 
             const sent = await sendReminderAtomic(
-              adminClient, profile.id, "streak", localDate, payload, vapidConfig
+              adminClient,
+              profile.id,
+              "streak",
+              localDate,
+              payload,
+              vapidConfig,
+              { template_index: templateIndex },
             );
             if (sent) remindersSent++;
           } else if (prefs.checkin_reminders_enabled) {
             // Send Generic Daily Check-in Reminder
+            const recentIndexes = await getRecentTemplateIndexes(adminClient, profile.id, "checkin");
+            const seed = hashString(`${profile.id}-${localDate}-checkin`);
+            const templateIndex = selectTemplateIndex("girl_checkin", recentIndexes, seed);
+            const body = formatNotificationBody("girl_checkin", templateIndex, girlName);
+
             const payload: PushNotificationPayload = {
               title: "Nightly",
-              body: "Your daily check-in is ready.",
+              body,
               url: "/check-in",
               tag: "nightly-checkin",
             };
 
             const sent = await sendReminderAtomic(
-              adminClient, profile.id, "checkin", localDate, payload, vapidConfig
+              adminClient,
+              profile.id,
+              "checkin",
+              localDate,
+              payload,
+              vapidConfig,
+              { template_index: templateIndex },
             );
             if (sent) remindersSent++;
           }
