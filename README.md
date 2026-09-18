@@ -73,7 +73,19 @@ Primary user can independently toggle:
   - **Quiet Hours**: Suppresses all reminders during configured sleep hours (supports midnight-crossing spans like `22:00` to `07:00`).
   - **Strict Timezone Safety**: Non-valid, NULL, or empty timezones are skipped safely without UTC fallback.
   - **Atomic Idempotency**: Database claim tokens (`claim_notification_slot`) ensure exactly one push attempt occurs across concurrent cron executions.
-  - **Partner Exclusion**: Automated reminders target primary users only; partners receive zero notifications.
+  - **Partner Contextual Reminders**: Dispatched only when she completes her check-in for the day and has active sharing permissions; partner notifications are gentle prompts that NEVER reveal private sleep metrics or sensitive data.
+  - **Hinglish Copy Engine**: 120 curated templates with name personalization and non-repeating daily rotation.
+
+### 7. Privacy-First Deterministic Sleep Insights
+- 100% client-side, deterministic pattern detection (`src/lib/patterns.ts`).
+- Generates plain-language observations on associations between daily habits (caffeine, evening screens, naps, daytime stress) and sleep metrics with honest confidence indicators (*Early signal*, *Moderate pattern*, *Stronger pattern*).
+- Requires real historical check-in thresholds (3+ days for early signals, 7+ days for moderate, 14+ for stronger).
+- Zero external AI APIs, zero LLMs, zero third-party data transmission.
+
+### 8. Responsible Use & Health Disclaimer
+- Whisper Sleep / Nightly is a personal companion app for sleep reflection, routine consistency, and mutual support between two people.
+- It does not diagnose sleep disorders, treat medical conditions, or provide clinical advice.
+- When prolonged sleep disruption is detected, the app gently encourages speaking with a qualified medical professional.
 
 ---
 

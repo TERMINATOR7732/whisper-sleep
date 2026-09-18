@@ -26,9 +26,11 @@ export function sanitizeDisplayName(name: string | null | undefined): string | n
   if (trimmed.length === 0) return null;
   // Never expose email addresses
   if (trimmed.includes("@")) return null;
-  // Never expose UUIDs or long database IDs
+  // Never expose UUIDs, long hashes, or account identifiers
   if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(trimmed)) return null;
+  if (/^[0-9a-fA-F-]{20,}$/.test(trimmed)) return null;
   if (/^[0-9a-fA-F]{24,}$/.test(trimmed)) return null;
+  if (/uuid|user_id|account_id/i.test(trimmed)) return null;
   // Never expose phone numbers
   if (/^\+?[0-9\s\-()]{7,}$/.test(trimmed)) return null;
   return trimmed;
