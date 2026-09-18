@@ -15,6 +15,7 @@ import { useResetPlan, useWindDownSessions } from "@/hooks/use-reset";
 import { useSleepHistory } from "@/hooks/use-sleep";
 import { useStreak } from "@/hooks/use-streak";
 import { toDayRecords } from "@/lib/day-records";
+import { generatePatterns, headlinePattern, observationLine } from "@/lib/patterns";
 import { detectRoughNight } from "@/lib/reset";
 import {
   QUALITY_LABELS,
@@ -86,7 +87,7 @@ function HomePage() {
   const timezone = safeTimezone(profile?.timezone);
   const today = todayInTimezone(timezone);
   const name = profile?.nickname || profile?.display_name;
-  const { data: history, isLoading } = useSleepHistory(7);
+  const { data: history, isLoading } = useSleepHistory(30);
   const { data: plan } = useResetPlan();
   const { preferences: notifPrefs } = useNotificationPreferences();
   const { streak } = useStreak();
@@ -104,6 +105,8 @@ function HomePage() {
   const sleepDays = useMemo(() => days.filter((day) => day.totalSleepMinutes != null), [days]);
   const targetMinutes = plan?.desired_sleep_minutes ?? profile?.sleep_goal_minutes ?? 480;
   const rough = useMemo(() => detectRoughNight(sleepDays, targetMinutes), [sleepDays, targetMinutes]);
+  const patterns = useMemo(() => generatePatterns(days), [days]);
+  const headline = useMemo(() => headlinePattern(patterns), [patterns]);
 
   const reminderCue = useMemo(() => {
     if (dismissedCue || !notifPrefs) return null;
@@ -345,8 +348,29 @@ function HomePage() {
       <SectionCard
         title="Insights"
         icon={Sparkles}
-        hint="Patterns need a little history first. When they're ready, they'll appear here in plain language — never as a clinical chart."
-      />
+        hint={
+          headline
+            ? headline.observation
+            : days.length >= 6
+              ? "Based on your recent nights, your sleep routine looks fairly steady with no strong disruptions."
+              : days.length === 0
+                ? "Patterns need a little history first. When they're ready, they'll appear here in plain language — never as a clinical chart."
+                : `${days.length} of 6 nights recorded. Once you have a few more nights, Nightly will highlight gentle patterns here.`
+        }
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          {headline ? (
+            <span className="text-xs text-muted-foreground">{observationLine(headline)}</span>
+          ) : days.length > 0 && days.length < 6 ? (
+            <span className="text-xs text-muted-foreground">Keep logging to see early signals</span>
+          ) : null}
+          <Button asChild variant="outline" size="sm">
+            <Link to="/insights">
+              {headline ? "View all insights" : "See insights"}
+            </Link>
+          </Button>
+        </div>
+      </SectionCard>
     </div>
   );
 }

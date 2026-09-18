@@ -290,10 +290,13 @@ function ResetPage() {
       ) : null}
 
       {relatedPattern ? (
-        <SectionCard title="Worth keeping in mind" icon={Sparkles} hint={observationLine(relatedPattern)}>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/insights">See your insights</Link>
-          </Button>
+        <SectionCard title="Worth keeping in mind" icon={Sparkles} hint={relatedPattern.observation}>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <span className="text-xs text-muted-foreground">{observationLine(relatedPattern)}</span>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/insights">See your insights</Link>
+            </Button>
+          </div>
         </SectionCard>
       ) : null}
 

@@ -99,6 +99,7 @@ export type HistoryItem = {
   sleep: SleepEntry | null;
   checkin: DailyCheckin | null;
   napMinutes: number;
+  reasons?: string[];
 };
 
 export function useSleepHistory(limit = 30) {
@@ -130,17 +131,36 @@ export function useSleepHistory(limit = 30) {
       checkins.data?.forEach((c) => dates.add(c.checkin_date));
       naps.data?.forEach((n) => dates.add(n.nap_date));
 
+      const entryIds = (entries.data ?? []).map((e) => e.id);
+      let reasonsData: { sleep_entry_id: string | null; reason: string }[] = [];
+      if (entryIds.length > 0) {
+        const { data: rData, error: rError } = await supabase
+          .from("sleep_reasons")
+          .select("sleep_entry_id, reason")
+          .in("sleep_entry_id", entryIds);
+        if (!rError && rData) {
+          reasonsData = rData;
+        }
+      }
+
       return [...dates]
         .sort((a, b) => (a < b ? 1 : -1))
         .slice(0, limit)
-        .map((date) => ({
-          date,
-          sleep: entries.data?.find((e) => e.sleep_date === date) ?? null,
-          checkin: checkins.data?.find((c) => c.checkin_date === date) ?? null,
-          napMinutes: (naps.data ?? [])
-            .filter((n) => n.nap_date === date)
-            .reduce((total, nap) => total + (nap.duration_minutes ?? 0), 0),
-        }));
+        .map((date) => {
+          const sleep = entries.data?.find((e) => e.sleep_date === date) ?? null;
+          const reasons = sleep
+            ? reasonsData.filter((r) => r.sleep_entry_id === sleep.id).map((r) => r.reason)
+            : [];
+          return {
+            date,
+            sleep,
+            checkin: checkins.data?.find((c) => c.checkin_date === date) ?? null,
+            napMinutes: (naps.data ?? [])
+              .filter((n) => n.nap_date === date)
+              .reduce((total, nap) => total + (nap.duration_minutes ?? 0), 0),
+            reasons,
+          };
+        });
     },
   });
 
