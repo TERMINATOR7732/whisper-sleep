@@ -8,6 +8,7 @@ import { RoleGate } from "@/components/app/role-gate";
 import { SectionCard } from "@/components/app/section-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NotificationOptInPopup } from "@/components/app/notification-opt-in-popup";
 import { StreakCard } from "@/components/sleep/streak-card";
 import { useNotificationPreferences } from "@/hooks/use-notifications";
 import { useProfile } from "@/hooks/use-profile";
@@ -204,6 +205,7 @@ function HomePage() {
 
   return (
     <div className="space-y-4">
+      <NotificationOptInPopup />
       <PageHeader
         title={
           <>
