@@ -38,3 +38,11 @@ dist-ssr
 
 # Local npm cache
 .npm-cache/
+
+# Supabase CLI temp cache
+.temp/
+supabase/.temp/
+
+.vercel
+.netlify/
+.env*
